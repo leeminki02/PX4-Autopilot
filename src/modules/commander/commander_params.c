@@ -345,7 +345,7 @@ PARAM_DEFINE_INT32(COM_QC_ACT, 0);
  * @value  7 Disarm
  * @group Commander
  */
-PARAM_DEFINE_INT32(COM_OBL_RC_ACT, 0);
+PARAM_DEFINE_INT32(COM_OBL_RC_ACT, 4);
 
 /**
  * Time-out to wait when onboard computer connection is lost before warning about loss connection.

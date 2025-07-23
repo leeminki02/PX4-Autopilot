@@ -94,7 +94,7 @@ parameters:
             type: boolean
             category: System
             reboot_required: true
-            default: 1
+            default: 0
 
         UXRCE_DDS_SYNCC:
             description:
@@ -104,4 +104,4 @@ parameters:
             type: boolean
             category: System
             reboot_required: true
-            default: 0
+            default: 1
