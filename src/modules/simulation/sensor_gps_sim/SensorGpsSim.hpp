@@ -82,7 +82,17 @@ private:
 
 	perf_counter_t _loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
 
+	hrt_abstime _start_time{0};
+	hrt_abstime _last_update_time{0};
+	float _drift_offset_n{0.0}; // m
+	float _drift_offset_e{0.0}; // m
+
 	DEFINE_PARAMETERS(
-		(ParamInt<px4::params::SIM_GPS_USED>) _sim_gps_used
+		(ParamInt<px4::params::SIM_GPS_USED>) _sim_gps_used,
+
+		/* Fault Drift Injection Parameters */
+		(ParamFloat<px4::params::SIM_GPS_FAULT_S>) _param_sim_gps_fault_s,
+		(ParamFloat<px4::params::SIM_GPS_DRIFT_N>) _param_sim_gps_drift_n,
+		(ParamFloat<px4::params::SIM_GPS_DRIFT_E>) _param_sim_gps_drift_e
 	)
 };

@@ -50,3 +50,36 @@ PARAM_DEFINE_INT32(SENS_EN_GPSSIM, 0);
  * @group Simulator
  */
 PARAM_DEFINE_INT32(SIM_GPS_USED, 10);
+
+
+/**
+ * GPS Drift Fault Start Time
+ *
+ * Simulation time in seconds after which the GPS drift fault starts.
+ * Set to -1 to disable.
+ *
+ * @unit s
+ * @min -1
+ * @group Simulator
+ */
+PARAM_DEFINE_FLOAT(SIM_GPS_FAULT_S, -1.0f);
+
+/**
+ * GPS Drift Velocity North
+ *
+ * Drift velocity in North direction.
+ *
+ * @unit m/s
+ * @group Simulator
+ */
+PARAM_DEFINE_FLOAT(SIM_GPS_DRIFT_N, 0.0f);
+
+/**
+ * GPS Drift Velocity East
+ *
+ * Drift velocity in East direction.
+ *
+ * @unit m/s
+ * @group Simulator
+ */
+PARAM_DEFINE_FLOAT(SIM_GPS_DRIFT_E, 0.0f);

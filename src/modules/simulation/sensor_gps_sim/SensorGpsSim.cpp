@@ -97,6 +97,11 @@ void SensorGpsSim::Run()
 
 	perf_begin(_loop_perf);
 
+	if (_start_time == 0) {
+		_start_time = hrt_absolute_time();
+		_last_update_time = _start_time;
+	}
+
 	// Check if parameters have changed
 	if (_parameter_update_sub.updated()) {
 		// clear update
@@ -114,8 +119,29 @@ void SensorGpsSim::Run()
 		vehicle_global_position_s gpos{};
 		_vehicle_global_position_sub.copy(&gpos);
 
-		double latitude = gpos.lat + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
-		double longitude = gpos.lon + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
+		/* GPS Drift Fault Injection */
+		hrt_abstime now = hrt_absolute_time();
+		const float fault_start_time_s = _param_sim_gps_fault_s.get();
+
+		if (fault_start_time_s >= 0.f) {
+			const float sim_time_s = (now - _start_time) * 1e-6f;
+
+			if (sim_time_s >= fault_start_time_s) {
+				// add drift
+				const float dt = (now - _last_update_time) * 1e-6f;
+				_drift_offset_n += _param_sim_gps_drift_n.get() * dt;
+				_drift_offset_e += _param_sim_gps_drift_e.get() * dt;
+			}
+		}
+
+		_last_update_time = now;
+
+		const double lat_rad = gpos.lat * M_PI / 180.0;
+		const double lat_offset_deg = (double)_drift_offset_n / CONSTANTS_RADIUS_OF_EARTH * (180.0 / M_PI);
+		const double lon_offset_deg = (double)_drift_offset_e / (CONSTANTS_RADIUS_OF_EARTH * cos(lat_rad)) * (180.0 / M_PI);
+
+		double latitude = gpos.lat + lat_offset_deg + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
+		double longitude = gpos.lon + lon_offset_deg + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
 		double altitude = (double)(gpos.alt + (generate_wgn() * 0.5f));
 
 		Vector3f gps_vel = Vector3f{lpos.vx, lpos.vy, lpos.vz} + noiseGauss3f(0.06f, 0.077f, 0.158f);
