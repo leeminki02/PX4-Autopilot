@@ -34,6 +34,7 @@
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/cli.h>
 #include <px4_platform_common/posix.h>
+#include <parameters/param.h>
 
 #include "uxrce_dds_client.h"
 
@@ -862,6 +863,12 @@ int UxrceddsClient::print_status()
 		PX4_INFO("Using transport:     serial");
 	}
 
+	if (_client_namespace != nullptr) {
+                PX4_INFO("Namespace:           %s", _client_namespace);
+        } else {
+		PX4_INFO("Namespace:           none");
+	}
+
 	if (_connected) {
 		PX4_INFO("Payload tx:          %i B/s", _last_payload_tx_rate);
 		PX4_INFO("Payload rx:          %i B/s", _last_payload_rx_rate);
@@ -948,6 +955,27 @@ UxrceddsClient *UxrceddsClient::instantiate(int argc, char *argv[])
 			break;
 		}
 	}
+
+	// VVVV 아래 코드를 통째로 추가하세요 VVVV
+	// ----------------------------------------------------------------
+	// 인수 전달이 불안정하므로, 여기서 파라미터를 직접 읽어서 네임스페이스를 설정한다.
+	param_t uxrce_dds_ns_param = param_find("UXRCE_DDS_NS");
+	int32_t uxrce_dds_ns_value = -1;
+
+	if (uxrce_dds_ns_param != PARAM_INVALID) {
+		param_get(uxrce_dds_ns_param, &uxrce_dds_ns_value);
+	}
+
+	static char namespace_buffer[32]; // 함수가 끝나도 살아있도록 static으로 선언
+
+	if (uxrce_dds_ns_value >= 0) {
+		// 파라미터 값이 유효하면 네임스페이스 문자열을 만들고,
+		// 기존 client_namespace 값을 덮어쓴다.
+		snprintf(namespace_buffer, sizeof(namespace_buffer), "px4_%d", (int)uxrce_dds_ns_value);
+		client_namespace = namespace_buffer;
+	}
+	// ----------------------------------------------------------------
+	// ^^^^ 여기까지 추가 ^^^^
 
 #if defined(UXRCE_DDS_CLIENT_UDP)
 
