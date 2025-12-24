@@ -22,4 +22,4 @@ param set-default RTL_DESCEND_ALT 10
 
 param set-default GPS_UBX_DYNMODEL 6
 
-param set-default UXRCE_DDS_NS 1 # 0-indexed number
+# param set-default UXRCE_DDS_NS 1 # 0-indexed number
