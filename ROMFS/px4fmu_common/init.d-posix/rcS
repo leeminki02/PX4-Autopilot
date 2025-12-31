@@ -3,7 +3,7 @@
 # Un comment and use set +e to ignore and set -e to enable 'exit on error control'
 set -e
 # Un comment the line below to help debug scripts by printing a trace of the script commands
-set -x
+# set -x
 
 # PX4 commands need the 'px4-' prefix in bash.
 # (px4-alias.sh is expected to be in the PATH)
@@ -182,11 +182,15 @@ param set-default SYS_FAILURE_EN 0
 # does not go below 50% by default, but failure injection can trigger failsafes.
 param set-default COM_LOW_BAT_ACT 0
 
-param set-default COM_ARM_WO_GPS 2 # arm without GNSS config, without warning
+
+
+param set-default COM_ARM_WO_GPS 1 # arm without GNSS config, without warning
 param set-default COM_ARM_BAT_MIN 0 # disable battery low warning
+
 # param set-default EKF2_MAG_TYPE 5
 # param set-default SYS_HAS_MAG 0  # disable use of onboard magnetometer: disable preflight check
-param set-default COM_POS_FS_DELAY 100
+
+param set-default COM_POS_FS_DELAY 1
 param set-default COM_POS_FS_EPH   -1
 param set-default COM_DISARM_PRFLT -1  # disable disarm preflight checks
 
@@ -366,7 +370,7 @@ then
 fi
 
 #user defined mavlink streams for instances can be in PATH
-. px4-rc.mavlink
+# . px4-rc.mavlink
 
 # execute autostart post script if any
 [ -e "$autostart_file".post ] && . "$autostart_file".post
