@@ -43,6 +43,7 @@
 #include <px4_platform_common/defines.h>
 #include <px4_platform_common/log.h>
 #include <uORB/topics/satellite_info.h>
+#include <uORB/topics/gnss_raw_measx.h>
 #include <uORB/topics/sensor_gps.h>
 #include <uORB/topics/sensor_gnss_relative.h>
 

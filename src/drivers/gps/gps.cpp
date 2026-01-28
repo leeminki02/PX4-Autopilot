@@ -109,6 +109,11 @@ struct GPS_Sat_Info {
 	satellite_info_s _data;
 };
 
+/* struct for GNSS raw measurement data */
+struct GNSS_Raw_Measx {
+	gnss_raw_measx_s _data;
+};
+
 static constexpr int TASK_STACK_SIZE = PX4_STACK_ADJUSTED(2040);
 
 
@@ -197,6 +202,10 @@ private:
 
 	uORB::PublicationMulti<satellite_info_s>	_report_sat_info_pub{ORB_ID(satellite_info)};		///< uORB pub for satellite info
 
+	GNSS_Raw_Measx                  *_gnss_raw_measx{nullptr};                      ///< instance of GNSS raw measurements data object
+	gnss_raw_measx_s		*_p_report_gnss_raw_measx{nullptr};		///< pointer to uORB topic for raw GNSS measurements
+	uORB::PublicationMulti<gnss_raw_measx_s>	_report_gnss_raw_measx_pub{ORB_ID(gnss_raw_measx)};	///< uORB pub for raw GNSS measurements
+
 	float				_rate{0.0f};					///< position update rate
 	float				_rate_rtcm_injection{0.0f};			///< RTCM message injection rate
 	unsigned			_last_rate_rtcm_injection_count{0};		///< counter for number of RTCM messages
@@ -230,6 +239,11 @@ private:
 	 * Publish the satellite info
 	 */
 	void 				publishSatelliteInfo();
+
+	/**
+	 * Publish the GNSS raw measurements
+	 */
+	void                            publishGNSSRawMeasx();
 
 	/**
 	 * Publish RTCM corrections
@@ -326,6 +340,17 @@ GPS::GPS(const char *path, gps_driver_mode_t mode, GPSHelper::Interface interfac
 		memset(_p_report_sat_info, 0, sizeof(*_p_report_sat_info));
 	}
 
+	/* Feature for AdversaryAnchor: handle gnss_raw_measx >>> */
+	int32_t enable_gnss_raw_measx = 0;
+	param_get(param_find("GPS_RAW_MEASX"), &enable_gnss_raw_measx);
+
+	if (enable_gnss_raw_measx) {
+		_gnss_raw_measx = new GNSS_Raw_Measx();
+		_p_report_gnss_raw_measx = &_gnss_raw_measx->_data;
+		memset(_p_report_gnss_raw_measx, 0, sizeof(*_p_report_gnss_raw_measx));
+	}
+	/* <<< End of Feature for AdversaryAnchor */
+
 	if (_interface == GPSHelper::Interface::UART) {
 		set_device_bus_type(device::Device::DeviceBusType::DeviceBusType_SERIAL);
 
@@ -383,6 +408,7 @@ GPS::~GPS()
 	}
 
 	delete _sat_info;
+	delete _gnss_raw_measx;
 	delete _dump_to_device;
 	delete _dump_from_device;
 	delete _helper;
@@ -845,7 +871,7 @@ GPS::run()
 
 		/* FALLTHROUGH */
 		case gps_driver_mode_t::UBX:
-			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info,
+			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info, _p_report_gnss_raw_measx,
 						   gps_ubx_dynmodel, heading_offset, f9p_uart2_baudrate, ubx_mode);
 			set_device_type(DRV_GPS_DEVTYPE_UBX);
 			break;
@@ -965,6 +991,10 @@ GPS::run()
 
 				if (_p_report_sat_info && (helper_ret & 2)) {
 					publishSatelliteInfo();
+				}
+
+				if (_p_report_gnss_raw_measx && (helper_ret & 4)) {
+					publishGNSSRawMeasx();
 				}
 
 				reset_if_scheduled();
@@ -1220,6 +1250,19 @@ GPS::publishSatelliteInfo()
 
 	} else {
 		//we don't publish satellite info for the secondary gps
+	}
+}
+
+void
+GPS::publishGNSSRawMeasx()
+{
+	if (_instance == Instance::Main) {
+		if (_p_report_gnss_raw_measx != nullptr) {
+			_report_gnss_raw_measx_pub.publish(*_p_report_gnss_raw_measx);
+		}
+
+	} else {
+		//we don't publish GNSS raw measx for the secondary gps
 	}
 }
 
