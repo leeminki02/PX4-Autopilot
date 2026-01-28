@@ -1,0 +1,5 @@
+menuconfig MODULES_SIMULATION_GPS_MEASX_SIM
+	bool "gps_measx_sim"
+	default n
+	---help---
+		Enable support for gps_measx_sim
