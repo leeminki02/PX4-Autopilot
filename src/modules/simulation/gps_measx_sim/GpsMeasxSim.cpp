@@ -107,7 +107,7 @@ void GpsMeasxSim::Run()
 	}
 
 	if ((_vehicle_local_position_sub.updated() && _vehicle_global_position_sub.updated() && _sim_gps_spoof_en.get() == 0)||
-	    (_spoofed_local_position_sub.updated() && _spoofed_global_position_sub.updated() && _sim_gps_spoof_en.get() == 1)) {
+	    (_spoofer_local_position_sub.updated() && _spoofer_global_position_sub.updated() && _sim_gps_spoof_en.get() == 1)) {
 
 		vehicle_local_position_s lpos{};
 		vehicle_global_position_s gpos{};
@@ -117,9 +117,9 @@ void GpsMeasxSim::Run()
 			_vehicle_local_position_sub.copy(&lpos);
 			_vehicle_global_position_sub.copy(&gpos);
 		} else {
-			// GPS spoofer simulation enabled: use spoofed position
-			_spoofed_local_position_sub.copy(&lpos);
-			_spoofed_global_position_sub.copy(&gpos);
+			// GPS spoofer simulation enabled: use spoofer position
+			_spoofer_local_position_sub.copy(&lpos);
+			_spoofer_global_position_sub.copy(&gpos);
 		}
 
 		double latitude = gpos.lat + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
