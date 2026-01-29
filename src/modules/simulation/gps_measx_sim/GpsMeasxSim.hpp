@@ -82,8 +82,8 @@ private:
 	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position_groundtruth)};
 	uORB::PublicationMulti<sensor_gps_s> _sensor_gps_pub{ORB_ID(sensor_gps)};
 
-	uORB::Subscription _spoofed_global_position_sub{ORB_ID(spoofed_global_position)};
-	uORB::Subscription _spoofed_local_position_sub{ORB_ID(spoofed_local_position)};
+	uORB::Subscription _spoofer_global_position_sub{ORB_ID(spoofer_global_position)};
+	uORB::Subscription _spoofer_local_position_sub{ORB_ID(spoofer_local_position)};
 	uORB::Subscription _satellite_ecef_sub{ORB_ID(satellite_ecef_groundtruth)};
 	uORB::PublicationMulti<gnss_raw_measx_s> _gnss_raw_measx_pub{ORB_ID(gnss_raw_measx)};
 
