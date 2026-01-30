@@ -91,6 +91,6 @@ private:
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::SIM_GPS_USED>) _sim_gps_used,
-		(ParamInt<px4::params::SIM_EN_SPOOF>) _sim_gps_spoof
+		(ParamInt<px4::params::SIM_EN_SPOOF>) _sim_en_spoof
 	)
 };
