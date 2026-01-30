@@ -106,13 +106,22 @@ void GpsMeasxSim::Run()
 		updateParams();
 	}
 
-	if ((_vehicle_local_position_sub.updated() && _vehicle_global_position_sub.updated() && _sim_gps_spoof_en.get() == 0)||
-	    (_spoofer_local_position_sub.updated() && _spoofer_global_position_sub.updated() && _sim_gps_spoof_en.get() == 1)) {
+	bool position_updated = false;
+	if (_sim_gps_spoof.get() == 0) {
+		if (_vehicle_global_position_sub.updated() && _vehicle_local_position_sub.updated()) {
+			position_updated = true;
+		}
+	} else {
+		if (_spoofer_global_position_sub.updated() && _spoofer_local_position_sub.updated()) {
+			position_updated = true;
+		}
+	}
 
+	if (position_updated) {
 		vehicle_local_position_s lpos{};
 		vehicle_global_position_s gpos{};
 
-		if (_sim_gps_spoof_en.get() == 0) {
+		if (_sim_gps_spoof.get() == 0) {
 			// GPS spoofer simulation disabled: benign behavior
 			_vehicle_local_position_sub.copy(&lpos);
 			_vehicle_global_position_sub.copy(&gpos);
@@ -186,25 +195,24 @@ void GpsMeasxSim::Run()
 		sensor_gps.timestamp = hrt_absolute_time();
 		_sensor_gps_pub.publish(sensor_gps);
 
-		if (_satellite_ecef_sub.updated()) { // I hope this is always true when we reach here
-			/* signal property simulator */
-			// calculate and publish gnss_raw_measx
-
-			// get satellite ecef positions from _satellite_ecef_sub
-			satellite_ecef_s sat_ecef{};
-			_satellite_ecef_sub.copy(&sat_ecef);
-
-			// TODO: calculate doppler shifts and pseudoranges with noise using groundtruth positions
-
-			gnss_raw_measx_s gnss_raw_measx{};
-			// TODO: populate gnss_raw_measx fields
-
-			// TODO: publish gnss_raw_measx
-			gnss_raw_measx.timestamp = hrt_absolute_time();
-			_gnss_raw_measx_pub.publish(gnss_raw_measx);
-		}
 	}
+	
+	if (_satellite_ecef_sub.updated()) { // I hope this is always true when we reach here
+		/* signal property simulator */
 
+		/* get satellite ecef positions from _satellite_ecef_sub */
+		satellite_ecef_s sat_ecef{};
+		_satellite_ecef_sub.copy(&sat_ecef);
+		// TODO: calculate doppler shifts with noise using groundtruth positions
+		PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count);
+
+		/* publish satellite signal properties (doppler shifts) -> gnss_raw_measx */
+		gnss_raw_measx_s gnss_raw_measx{};
+		// TODO: populate gnss_raw_measx fields
+
+		gnss_raw_measx.timestamp = hrt_absolute_time();
+		_gnss_raw_measx_pub.publish(gnss_raw_measx);
+	}
 
 	perf_end(_loop_perf);
 }

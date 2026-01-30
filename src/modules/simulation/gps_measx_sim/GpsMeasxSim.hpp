@@ -84,13 +84,13 @@ private:
 
 	uORB::Subscription _spoofer_global_position_sub{ORB_ID(spoofer_global_position)};
 	uORB::Subscription _spoofer_local_position_sub{ORB_ID(spoofer_local_position)};
-	uORB::Subscription _satellite_ecef_sub{ORB_ID(satellite_ecef_groundtruth)};
+	uORB::Subscription _satellite_ecef_sub{ORB_ID(satellite_ecef)};
 	uORB::PublicationMulti<gnss_raw_measx_s> _gnss_raw_measx_pub{ORB_ID(gnss_raw_measx)};
 
 	perf_counter_t _loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::SIM_GPS_USED>) _sim_gps_used,
-		(ParamInt<px4::params::SIM_GPS_SPOOF_EN>) _sim_gps_spoof_en
+		(ParamInt<px4::params::SIM_EN_SPOOF>) _sim_gps_spoof
 	)
 };
