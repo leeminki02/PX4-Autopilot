@@ -107,7 +107,7 @@ void GpsMeasxSim::Run()
 	}
 
 	bool position_updated = false;
-	if (_sim_gps_spoof.get() == 0) {
+	if (_sim_en_spoof.get() == 0) {
 		if (_vehicle_global_position_sub.updated() && _vehicle_local_position_sub.updated()) {
 			position_updated = true;
 		}
@@ -121,7 +121,7 @@ void GpsMeasxSim::Run()
 		vehicle_local_position_s lpos{};
 		vehicle_global_position_s gpos{};
 
-		if (_sim_gps_spoof.get() == 0) {
+		if (_sim_en_spoof.get() == 0) {
 			// GPS spoofer simulation disabled: benign behavior
 			_vehicle_local_position_sub.copy(&lpos);
 			_vehicle_global_position_sub.copy(&gpos);
@@ -204,7 +204,7 @@ void GpsMeasxSim::Run()
 		satellite_ecef_s sat_ecef{};
 		_satellite_ecef_sub.copy(&sat_ecef);
 		// TODO: calculate doppler shifts with noise using groundtruth positions
-		PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count);
+		// PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count);
 
 		/* publish satellite signal properties (doppler shifts) -> gnss_raw_measx */
 		gnss_raw_measx_s gnss_raw_measx{};
