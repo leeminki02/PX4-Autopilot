@@ -30,17 +30,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-/**
- * Enable simulated GPS sinstance
- *
- * @reboot_required true
- * @min 0
- * @max 1
- * @group Sensors
- * @value 0 Disabled
- * @value 1 Enabled
-  */
-PARAM_DEFINE_INT32(SENS_EN_GPSSIM, 0);
+// /**
+//  * Enable simulated GPS sinstance
+//  *
+//  * @reboot_required true
+//  * @min 0
+//  * @max 1
+//  * @group Sensors
+//  * @value 0 Disabled
+//  * @value 1 Enabled
+//   */
+// PARAM_DEFINE_INT32(SENS_EN_GPSSIM, 0);
 
 /**
  * simulated GPS number of satellites used
@@ -49,7 +49,7 @@ PARAM_DEFINE_INT32(SENS_EN_GPSSIM, 0);
  * @max  50
  * @group Simulator
  */
-PARAM_DEFINE_INT32(SIM_GPS_USED, 24);
+// PARAM_DEFINE_INT32(SIM_SPF_USED, 24);
 
 
 /**
@@ -60,6 +60,6 @@ PARAM_DEFINE_INT32(SIM_GPS_USED, 24);
  * @value 1 Enabled
  * @group Simulator
  */
-PARAM_DEFINE_INT32(SIM_GPS_SPOOF_EN, 0);
+PARAM_DEFINE_INT32(SIM_EN_SPOOF, 0);
 
 
