@@ -11,6 +11,7 @@ menu "Simulation"
         select MODULES_SIMULATION_SENSOR_MAG_SIM
         select MODULES_SIMULATION_SIMULATOR_MAVLINK
         select MODULES_SIMULATION_SIMULATOR_SIH
+        select MODULES_SIMULATION_GPS_MEASX_SIM
         ---help---
             Enable default set of simulation modules
     rsource "*/Kconfig"

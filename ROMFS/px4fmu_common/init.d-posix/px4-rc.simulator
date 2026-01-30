@@ -24,7 +24,8 @@ if [ "$PX4_SIMULATOR" = "sihsim" ] || [ "$(param show -q SYS_AUTOSTART)" -eq "0"
 		fi
 		if param compare -s SENS_EN_GPSSIM 1
 		then
-			sensor_gps_sim start
+			# sensor_gps_sim start
+			gps_measx_sim start
 		fi
 		if param compare -s SENS_EN_MAGSIM 1
 		then
@@ -140,7 +141,8 @@ elif [ "$PX4_SIMULATOR" = "gz" ] || [ "$(param show -q SIM_GZ_EN)" = "1" ]; then
 	fi
 	if param compare -s SENS_EN_GPSSIM 1
 	then
-		sensor_gps_sim start
+		# sensor_gps_sim start
+		gps_measx_sim start
 	fi
 	if param compare -s SENS_EN_MAGSIM 1
 	then
