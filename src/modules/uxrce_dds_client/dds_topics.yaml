@@ -169,5 +169,11 @@ subscriptions:
   - topic: /fmu/in/satellite_ecef
     type: px4_msgs::msg::SatelliteEcef
 
+  - topic: /fmu/in/spoofer_global_position
+    type: px4_msgs::msg::VehicleGlobalPosition
+
+  - topic: /fmu/in/spoofer_local_position
+    type: px4_msgs::msg::VehicleLocalPosition
+
 # Create uORB::PublicationMulti
 subscriptions_multi:
