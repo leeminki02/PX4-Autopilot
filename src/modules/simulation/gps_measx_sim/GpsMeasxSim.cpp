@@ -36,8 +36,40 @@
 #include <drivers/drv_sensor.h>
 #include <lib/drivers/device/Device.hpp>
 #include <lib/geo/geo.h>
+#include <cmath>
 
 using namespace matrix;
+
+// WGS84 Constants
+static constexpr double CONSTANTS_R_OF_EARTH = 6378137.0;          // Semi-major axis (a)
+static constexpr double CONSTANTS_EARTH_E2 = 6.69437999014e-3;          // Eccentricity squared (e^2)
+
+/**
+ * Convert Geodetic coordinates (Lat, Lon, Alt) to ECEF coordinates (X, Y, Z)
+ * * @param lat: Latitude in degrees
+ * @param lon: Longitude in degrees
+ * @param alt: Altitude in meters (AMSL or Ellipsoid height)
+ * @param x, y, z: Output ECEF coordinates in meters
+ */
+static void map_projection_global_get_ecef(double lat, double lon, double alt, double *x, double *y, double *z)
+{
+    double lat_rad = math::radians(lat);
+    double lon_rad = math::radians(lon);
+
+    double sin_lat = sin(lat_rad);
+    double cos_lat = cos(lat_rad);
+    double sin_lon = sin(lon_rad);
+    double cos_lon = cos(lon_rad);
+
+    // Prime Vertical Radius of Curvature (N)
+    // N = a / sqrt(1 - e^2 * sin^2(lat))
+    double N = CONSTANTS_R_OF_EARTH / sqrt(1.0 - CONSTANTS_EARTH_E2 * sin_lat * sin_lat);
+
+    // ECEF Conversion Formula
+    *x = (N + alt) * cos_lat * cos_lon;
+    *y = (N + alt) * cos_lat * sin_lon;
+    *z = (N * (1.0 - CONSTANTS_EARTH_E2) + alt) * sin_lat;
+}
 
 GpsMeasxSim::GpsMeasxSim() :
 	ModuleParams(nullptr),
@@ -206,11 +238,116 @@ void GpsMeasxSim::Run()
 		// TODO: calculate doppler shifts with noise using groundtruth positions
 		// PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count);
 
-		/* publish satellite signal properties (doppler shifts) -> gnss_raw_measx */
-		gnss_raw_measx_s gnss_raw_measx{};
-		// TODO: populate gnss_raw_measx fields
+		/* get groundtruth positions */
+		vehicle_global_position_s gpos_truth{};
+		vehicle_local_position_s lpos_truth{};
+		_vehicle_global_position_sub.copy(&gpos_truth);
+		_vehicle_local_position_sub.copy(&lpos_truth);
 
+		double drone_x, drone_y, drone_z;
+		map_projection_global_get_ecef(gpos_truth.lat, gpos_truth.lon, gpos_truth.alt,
+					      		&drone_x, &drone_y, &drone_z);
+		Vector3d p_drone(drone_x, drone_y, drone_z);
+
+		// transform velocity to ecef
+		double lat_rad = math::radians(gpos_truth.lat);
+		double lon_rad = math::radians(gpos_truth.lon);
+		float sin_lat = sin(lat_rad);
+		float cos_lat = cos(lat_rad);
+		float sin_lon = sin(lon_rad);
+		float cos_lon = cos(lon_rad);
+
+		Matrix3f R_ned_to_ecef;
+		R_ned_to_ecef(0, 0) = -sin_lat * cos_lon;
+		R_ned_to_ecef(0, 1) = -sin_lon;
+		R_ned_to_ecef(0, 2) = -cos_lat * cos_lon;
+		R_ned_to_ecef(1, 0) = -sin_lat * sin_lon;
+		R_ned_to_ecef(1, 1) =  cos_lon;
+		R_ned_to_ecef(1, 2) = -cos_lat * sin_lon;
+		R_ned_to_ecef(2, 0) =  cos_lat;
+		R_ned_to_ecef(2, 1) =  0.0f;
+		R_ned_to_ecef(2, 2) = -sin_lat;
+
+		Vector3f v_ned(lpos_truth.vx, lpos_truth.vy, lpos_truth.vz);
+		Vector3f v_drone_f = R_ned_to_ecef * v_ned;
+		Vector3d v_drone(v_drone_f(0), v_drone_f(1), v_drone_f(2));
+
+		/* load spoofer position as ecef */
+		bool is_spoofed = (_sim_en_spoof.get() == 1);
+		Vector3d p_emitter(0.0, 0.0, 0.0);
+		Vector3d v_emitter(0.0, 0.0, 0.0);
+
+		if (is_spoofed) {
+			vehicle_global_position_s gpos_spoofer{};
+			vehicle_local_position_s lpos_spoofer{};
+			_spoofer_global_position_sub.copy(&gpos_spoofer);
+			_spoofer_local_position_sub.copy(&lpos_spoofer);
+
+			double spoofer_x, spoofer_y, spoofer_z;
+			map_projection_global_get_ecef(gpos_spoofer.lat, gpos_spoofer.lon, gpos_spoofer.alt,
+						       &spoofer_x, &spoofer_y, &spoofer_z);
+			p_emitter = Vector3d(spoofer_x, spoofer_y, spoofer_z);
+
+			// transform velocity from NED to ecef
+			Vector3f v_ned_spoofer(lpos_spoofer.vx, lpos_spoofer.vy, lpos_spoofer.vz);
+			Vector3f v_spoofer_f = R_ned_to_ecef * v_ned_spoofer;
+			v_emitter = Vector3d(v_spoofer_f(0), v_spoofer_f(1), v_spoofer_f(2));
+		}
+
+		/* calculate doppler */
+		gnss_raw_measx_s gnss_raw_measx{};
 		gnss_raw_measx.timestamp = hrt_absolute_time();
+
+		int count = 0;
+		
+		for (int i = 0; i < sat_ecef.count; i++) {
+			Vector3d p_sat(sat_ecef.p_x[i], sat_ecef.p_y[i], sat_ecef.p_z[i]);
+			Vector3d v_sat(sat_ecef.v_x[i], sat_ecef.v_y[i], sat_ecef.v_z[i]);
+
+			double doppler_total = 0.0;
+			const double lambda = 0.19029367279836487; // TODO: check L1 frequency wavelength
+			
+			if (!is_spoofed) {
+				// benign doppler: doppler_total = doppler_sat_drone
+				Vector3d rel_vel = v_sat - v_drone;
+				Vector3d u_los = (p_sat - p_drone).normalized(); // line-of-sight unit vector
+				doppler_total = - (rel_vel.dot(u_los)) / lambda;
+			} else {
+				// spoofed doppler: doppler_total = doppler_sat_emitter + doppler_emitter_drone
+				// 1. doppler_sim = doppler_sat_emitter
+				Vector3d rel_vel = v_sat - v_emitter;
+				Vector3d u_los = (p_sat - p_emitter).normalized(); // line-of-sight unit vector
+				double doppler_sim = - (rel_vel.dot(u_los)) / lambda;
+
+				// 2. doppler_phy = doppler_emitter_drone (the doppler shift caused by spoofer and drone's physical motion)
+				Vector3d rel_vel_phy = v_emitter - v_drone;
+				Vector3d u_los_phy = (p_emitter - p_drone).normalized(); // line-of-sight unit vector
+				double doppler_phy = - (rel_vel_phy.dot(u_los_phy)) / lambda;
+
+				doppler_total = doppler_sim + doppler_phy;
+			}
+			
+			// add noise
+			doppler_total += (double)generate_wgn() * 0.5; // 0.5 Hz std dev
+			// int32[24] dopplerms		# Doppler Measurement (m/s) [*0.04 m/s]
+			int32_t doppler_ms = (int)(doppler_total / 0.04 * lambda);
+			// int32[24] dopplerhz		# Doppler Measurement [*0.2  Hz]
+			int32_t doppler_hz = (int)(doppler_total / 0.2);
+
+			// populate
+			gnss_raw_measx.cno[i] = 45; // dummy value for now.
+			gnss_raw_measx.gnssid[i] = 0; // they're all GPS satellites.
+			gnss_raw_measx.svid[i] = sat_ecef.svid[i];
+			gnss_raw_measx.dopplerms[i] = doppler_ms;
+			gnss_raw_measx.dopplerhz[i] = doppler_hz;
+
+			count++;
+			if (count >= gnss_raw_measx.GNSS_MEASX_MAX_SATELLITES) {
+				break;
+			}
+		}
+		gnss_raw_measx.count = count;
+
 		_gnss_raw_measx_pub.publish(gnss_raw_measx);
 	}
 
