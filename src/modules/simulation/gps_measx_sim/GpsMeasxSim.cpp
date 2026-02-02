@@ -335,9 +335,9 @@ void GpsMeasxSim::Run()
 			// add noise
 			doppler_total += (double)generate_wgn() * 0.5; // 0.5 Hz std dev
 			// int32[24] dopplerms		# Doppler Measurement (m/s) [*0.04 m/s]
-			int32_t doppler_ms = (int)(doppler_total / 0.04 * lambda);
+			int32_t doppler_ms = (int32_t)round(doppler_total / 0.04 * lambda);
 			// int32[24] dopplerhz		# Doppler Measurement [*0.2  Hz]
-			int32_t doppler_hz = (int)(doppler_total / 0.2);
+			int32_t doppler_hz = (int32_t)round(doppler_total / 0.2);
 
 			// populate
 			gnss_raw_measx.cno[i] = 45; // dummy value for now.
