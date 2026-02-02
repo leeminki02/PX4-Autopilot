@@ -159,6 +159,11 @@ void GpsMeasxSim::Run()
 			_vehicle_global_position_sub.copy(&gpos);
 		} else {
 			// GPS spoofer simulation enabled: use spoofer position
+			// warn once "spoofer enabled"
+			if (!_has_warned_spoofer) {
+				PX4_WARN("GPS spoofer simulation enabled");
+				_has_warned_spoofer = true;
+			}
 			_spoofer_local_position_sub.copy(&lpos);
 			_spoofer_global_position_sub.copy(&gpos);
 		}
