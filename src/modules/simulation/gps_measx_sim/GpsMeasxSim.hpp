@@ -67,6 +67,7 @@ public:
 	static int print_usage(const char *reason = nullptr);
 
 	bool init();
+	bool _has_warned_spoofer = false;
 
 private:
 	void Run() override;
