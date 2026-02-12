@@ -175,7 +175,36 @@ void GpsMeasxSim::Run()
 		double longitude = gpos.lon + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
 		double altitude = (double)(gpos.alt + (generate_wgn() * 0.5f));
 
-		Vector3f gps_vel = Vector3f{lpos.vx, lpos.vy, lpos.vz} + noiseGauss3f(0.06f, 0.077f, 0.158f);
+		/* Lever Arm Effect >>>>> */
+
+		Vector3f v_ned(lpos.vx, lpos.vy, lpos.vz);
+		vehicle_attitude_s att_gt{};
+		vehicle_angular_velocity_s ang_vel_gt{};
+		bool has_att = _vehicle_attitude_sub.copy(&att_gt);
+		bool has_ang_vel = _vehicle_angular_velocity_sub.copy(&ang_vel_gt);
+		
+		if (has_att && has_ang_vel) {
+			//< rotation matrix Quaternion
+			matrix::Quatf q_att(att_gt.q);
+			
+			//<ground truth angular velocity in body frame
+			matrix::Vector3f omega_body(ang_vel_gt.xyz);
+			
+			//< lever arm velocity in body frame
+			matrix::Vector3f v_tangential_body = omega_body.cross(_lever_arm);
+			
+			//< lever arm velocity in NED frame
+			matrix::Vector3f v_tangential_ned = q_att.rotateVector(v_tangential_body);
+			
+			// add to v_ned
+			v_ned += v_tangential_ned;			
+		}
+
+		Vector3f gps_vel = v_ned + noiseGauss3f(0.06f, 0.077f, 0.158f);
+
+		/* <<<<< Lever Arm Effect */
+
+		// Vector3f gps_vel = Vector3f{lpos.vx, lpos.vy, lpos.vz} + noiseGauss3f(0.06f, 0.077f, 0.158f);
 
 		// device id
 		device::Device::DeviceId device_id;
@@ -253,7 +282,6 @@ void GpsMeasxSim::Run()
 		_vehicle_local_position_sub.copy(&lpos_truth);
 
 		/* Lever Arm Effect simulation >>>>> */
-		// TODO: implement this!
 		Vector3f v_ned(lpos_truth.vx, lpos_truth.vy, lpos_truth.vz);
 		
 		vehicle_attitude_s att_gt{};
