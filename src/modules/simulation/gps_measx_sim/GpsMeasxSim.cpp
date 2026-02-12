@@ -136,6 +136,9 @@ void GpsMeasxSim::Run()
 		_parameter_update_sub.copy(&param_update);
 
 		updateParams();
+		_lever_arm(0) = _param_ekf2_gps_pos_x.get();
+		_lever_arm(1) = _param_ekf2_gps_pos_y.get();
+		_lever_arm(2) = _param_ekf2_gps_pos_z.get();
 	}
 
 	bool position_updated = false;
@@ -249,6 +252,39 @@ void GpsMeasxSim::Run()
 		_vehicle_global_position_sub.copy(&gpos_truth);
 		_vehicle_local_position_sub.copy(&lpos_truth);
 
+		/* Lever Arm Effect simulation >>>>> */
+		// TODO: implement this!
+		Vector3f v_ned(lpos_truth.vx, lpos_truth.vy, lpos_truth.vz);
+		
+		vehicle_attitude_s att_gt{};
+		vehicle_angular_velocity_s ang_vel_gt{};
+		bool has_att = _vehicle_attitude_sub.copy(&att_gt);
+		bool has_ang_vel = _vehicle_angular_velocity_sub.copy(&ang_vel_gt);
+
+		if (has_att && has_ang_vel) {
+			//< rotation matrix Quaternion
+			matrix::Quatf q_att(att_gt.q);
+
+			//<ground truth angular velocity in body frame
+			matrix::Vector3f omega_body(ang_vel_gt.xyz);
+
+			//< lever arm velocity in body frame
+			matrix::Vector3f v_tangential_body = omega_body.cross(_lever_arm);
+
+			//< lever arm velocity in NED frame
+			matrix::Vector3f v_tangential_ned = q_att.rotateVector(v_tangential_body);
+
+			// add to v_ned
+			v_ned += v_tangential_ned;
+
+			// DEBUG: check if the lever arm computation is working properly.
+			if (omega_body.norm() > 0.5f) {
+				PX4_WARN("Spinning: Vel Lever Arm NED: [%.2f, %.2f, %.2f] m/s added.", (double)v_tangential_ned(0), (double)v_tangential_ned(1), (double)v_tangential_ned(2));
+			}
+		}
+
+		/* <<<<< Lever Arm Effect simulation */
+
 		double drone_x, drone_y, drone_z;
 		map_projection_global_get_ecef(gpos_truth.lat, gpos_truth.lon, gpos_truth.alt,
 					      		&drone_x, &drone_y, &drone_z);
@@ -273,7 +309,6 @@ void GpsMeasxSim::Run()
 		R_ned_to_ecef(2, 1) =  0.0f;
 		R_ned_to_ecef(2, 2) = -sin_lat;
 
-		Vector3f v_ned(lpos_truth.vx, lpos_truth.vy, lpos_truth.vz);
 		Vector3f v_drone_f = R_ned_to_ecef * v_ned;
 		Vector3d v_drone(v_drone_f(0), v_drone_f(1), v_drone_f(2));
 

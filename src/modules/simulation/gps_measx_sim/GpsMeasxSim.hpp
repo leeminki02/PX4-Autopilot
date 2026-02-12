@@ -45,6 +45,8 @@
 #include <uORB/topics/sensor_gps.h>
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/vehicle_angular_velocity.h>
 #include <uORB/topics/gnss_raw_measx.h>
 #include <uORB/topics/satellite_ecef.h>
 
@@ -81,6 +83,8 @@ private:
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 	uORB::Subscription _vehicle_global_position_sub{ORB_ID(vehicle_global_position_groundtruth)};
 	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position_groundtruth)};
+	uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude_groundtruth)};
+	uORB::Subscription _vehicle_angular_velocity_sub{ORB_ID(vehicle_angular_velocity_groundtruth)};
 	uORB::PublicationMulti<sensor_gps_s> _sensor_gps_pub{ORB_ID(sensor_gps)};
 
 	uORB::Subscription _spoofer_global_position_sub{ORB_ID(spoofer_global_position)};
@@ -92,6 +96,15 @@ private:
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::SIM_GPS_USED>) _sim_gps_used,
-		(ParamInt<px4::params::SIM_EN_SPOOF>) _sim_en_spoof
+		(ParamInt<px4::params::SIM_EN_SPOOF>) _sim_en_spoof,
+		(ParamFloat<px4::params::EKF2_GPS_POS_X>) _param_ekf2_gps_pos_x,
+		(ParamFloat<px4::params::EKF2_GPS_POS_Y>) _param_ekf2_gps_pos_y,
+		(ParamFloat<px4::params::EKF2_GPS_POS_Z>) _param_ekf2_gps_pos_z
 	)
+
+	// ParamFloat<px4::params::EKF2_GPS_POS_X> _param_ekf2_gps_pos_x;
+    // ParamFloat<px4::params::EKF2_GPS_POS_Y> _param_ekf2_gps_pos_y;
+    // ParamFloat<px4::params::EKF2_GPS_POS_Z> _param_ekf2_gps_pos_z;
+
+	matrix::Vector3f _lever_arm{0.0f, 0.0f, 0.0f}; ///< GPS lever arm in body frame
 };
