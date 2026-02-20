@@ -156,7 +156,9 @@ void GpsMeasxSim::Run()
 		vehicle_local_position_s lpos{};
 		vehicle_global_position_s gpos{};
 
-		if (_sim_en_spoof.get() == 0) {
+		if (_sim_en_spoof.get() != 1) {
+			// if 0 (benign) or 2 (mixed), use true position for sensor_gps.
+			// explanation: for mixed mode, for more dynamic behavior testings, we should make the simulation of valid positioning (but the gnss_raw_measx measurements will be distorted)
 			// GPS spoofer simulation disabled: benign behavior
 			_vehicle_local_position_sub.copy(&lpos);
 			_vehicle_global_position_sub.copy(&gpos);
@@ -341,11 +343,12 @@ void GpsMeasxSim::Run()
 		Vector3d v_drone(v_drone_f(0), v_drone_f(1), v_drone_f(2));
 
 		/* load spoofer position as ecef */
-		bool is_spoofed = (_sim_en_spoof.get() == 1);
+		int8_t sim_en_spoof = _sim_en_spoof.get();
+		bool is_benign = (_sim_en_spoof.get() == 0);
 		Vector3d p_emitter(0.0, 0.0, 0.0);
 		Vector3d v_emitter(0.0, 0.0, 0.0);
 
-		if (is_spoofed) {
+		if (!is_benign) {
 			vehicle_global_position_s gpos_spoofer{};
 			vehicle_local_position_s lpos_spoofer{};
 			_spoofer_global_position_sub.copy(&gpos_spoofer);
@@ -367,6 +370,8 @@ void GpsMeasxSim::Run()
 		gnss_raw_measx.timestamp = hrt_absolute_time();
 
 		int count = 0;
+		// if sim_en_spoof is 2 (mixed), create a spoofing effect on half of the satellites and benign on the other half
+		// the selection of which satellites are spoofed: even svid-ed satellites are simulated as spoofed.
 		
 		for (int i = 0; i < sat_ecef.count; i++) {
 			Vector3d p_sat(sat_ecef.p_x[i], sat_ecef.p_y[i], sat_ecef.p_z[i]);
@@ -375,12 +380,14 @@ void GpsMeasxSim::Run()
 			double doppler_total = 0.0;
 			const double lambda = 0.19029367279836487; // TODO: check L1 frequency wavelength
 			
-			if (!is_spoofed) {
+			if (is_benign || (sim_en_spoof == 2 && (sat_ecef.svid[i] % 2 != 0))) { 
+				// benign observation
 				// benign doppler: doppler_total = doppler_sat_drone
 				Vector3d rel_vel = v_sat - v_drone;
 				Vector3d u_los = (p_sat - p_drone).normalized(); // line-of-sight unit vector
 				doppler_total = - (rel_vel.dot(u_los)) / lambda;
-			} else {
+			} else { 
+				// spoofed observation
 				// spoofed doppler: doppler_total = doppler_sat_emitter + doppler_emitter_drone
 				// 1. doppler_sim = doppler_sat_emitter
 				Vector3d rel_vel = v_sat - v_emitter;

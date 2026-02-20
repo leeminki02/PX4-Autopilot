@@ -58,6 +58,7 @@
  * @max 1
  * @value 0 Disabled
  * @value 1 Enabled
+ * @value 2 Mixed
  * @group Simulator
  */
 PARAM_DEFINE_INT32(SIM_EN_SPOOF, 0);
