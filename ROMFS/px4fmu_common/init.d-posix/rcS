@@ -298,9 +298,12 @@ then
 	# Match UXRCE_DDS_DOM_ID with ROS_DOMAIN_ID, if defined
 	param set UXRCE_DDS_DOM_ID $ROS_DOMAIN_ID
 else
-	param set UXRCE_DDS_DOM_ID 0
+	# for multi-vehicle, 10+px4_instance to detach each agent's network from main ROS_DOMAIN_ID=0
+	param set UXRCE_DDS_DOM_ID $((10+px4_instance))
 fi
-uxrce_dds_port=8888
+# uxrce_dds_port=8888
+# for multi intances setup, use different ports to detach each dds domain
+uxrce_dds_port=$((8888+px4_instance))
 if [ -n "$PX4_UXRCE_DDS_PORT" ]
 then
 	# Override port if environment variable is defined
