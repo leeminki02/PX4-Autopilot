@@ -308,9 +308,9 @@ void GpsMeasxSim::Run()
 			v_ned += v_tangential_ned;
 
 			// DEBUG: check if the lever arm computation is working properly.
-			if (omega_body.norm() > 0.5f) {
-				PX4_WARN("Spinning: Vel Lever Arm NED: [%.2f, %.2f, %.2f] m/s added.", (double)v_tangential_ned(0), (double)v_tangential_ned(1), (double)v_tangential_ned(2));
-			}
+			// if (omega_body.norm() > 0.5f) {
+			// 	PX4_WARN("Spinning: Vel Lever Arm NED: [%.2f, %.2f, %.2f] m/s added.", (double)v_tangential_ned(0), (double)v_tangential_ned(1), (double)v_tangential_ned(2));
+			// }
 		}
 
 		/* <<<<< Lever Arm Effect simulation */
