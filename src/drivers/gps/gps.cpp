@@ -207,7 +207,7 @@ private:
 
 	GNSS_Ephemeris                  *_gnss_ephemeris{nullptr};                      ///< instance of GNSS Ephemeris data object
 	gnss_ephemeris_s		*_p_report_gnss_ephemeris{nullptr};		///< pointer to uORB topic for GNSS Ephemeris measurements
-	uORB::PublicationMulti<gnss_ephemeris_s>	_report_gnss_ephemeris_pub{ORB_ID(gnss_ephemeris)};	///< uORB pub for GNSS Ephemeris measurements
+	uORB::PublicationMulti<gnss_ephemeris_s>	_report_gnss_ephemeris_pub{ORB_ID(gnss_ephemeris_out)};	///< uORB pub for GNSS Ephemeris measurements
 
 	GNSS_Raw_Measx                  *_gnss_raw_measx{nullptr};                      ///< instance of GNSS raw measurements data object
 	gnss_raw_measx_s		*_p_report_gnss_raw_measx{nullptr};		///< pointer to uORB topic for raw GNSS measurements

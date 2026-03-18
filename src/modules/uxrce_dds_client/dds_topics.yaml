@@ -17,6 +17,10 @@ publications:
     type: px4_msgs::msg::VehicleLandDetected
     rate_limit: 5.
 
+
+  - topic: /fmu/out/sensor_combined
+    type: px4_msgs::msg::SensorCombined
+
   - topic: /fmu/out/vehicle_attitude
     type: px4_msgs::msg::VehicleAttitude
 
@@ -43,6 +47,9 @@ publications:
     type: px4_msgs::msg::VehicleStatus
     rate_limit: 5.
 
+  - topic: /fmu/out/gnss_ephemeris_out
+    type: px4_msgs::msg::GnssEphemeris
+
   - topic: /fmu/out/gnss_raw_measx
     type: px4_msgs::msg::GnssRawMeasx
 
@@ -66,6 +73,9 @@ subscriptions:
 
   - topic: /fmu/in/spoofer_local_position
     type: px4_msgs::msg::VehicleLocalPosition
+
+  - topic: /fmu/in/gnss_ephemeris_in
+    type: px4_msgs::msg::GnssEphemeris
 
 # Create uORB::PublicationMulti
 subscriptions_multi:
