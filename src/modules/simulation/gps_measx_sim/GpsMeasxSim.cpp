@@ -141,6 +141,11 @@ void GpsMeasxSim::Run()
 		_lever_arm(2) = _param_ekf2_gps_pos_z.get();
 	}
 
+	gnss_ephemeris_s eph;
+	if (_gnss_ephemeris_in_sub.update(&eph)) {
+		_gnss_ephemeris_out_pub.publish(eph);
+	}
+
 	bool position_updated = false;
 	if (_sim_en_spoof.get() == 0) {
 		if (_vehicle_global_position_sub.updated() && _vehicle_local_position_sub.updated()) {

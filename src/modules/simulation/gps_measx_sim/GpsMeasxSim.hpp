@@ -47,6 +47,7 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_angular_velocity.h>
+#include <uORB/topics/gnss_ephemeris.h>
 #include <uORB/topics/gnss_raw_measx.h>
 #include <uORB/topics/satellite_ecef.h>
 
@@ -90,6 +91,8 @@ private:
 	uORB::Subscription _spoofer_global_position_sub{ORB_ID(spoofer_global_position)};
 	uORB::Subscription _spoofer_local_position_sub{ORB_ID(spoofer_local_position)};
 	uORB::Subscription _satellite_ecef_sub{ORB_ID(satellite_ecef)};
+	uORB::Subscription _gnss_ephemeris_in_sub{ORB_ID(gnss_ephemeris_in)};
+	uORB::PublicationMulti<gnss_ephemeris_s> _gnss_ephemeris_out_pub{ORB_ID(gnss_ephemeris_out)};
 	uORB::PublicationMulti<gnss_raw_measx_s> _gnss_raw_measx_pub{ORB_ID(gnss_raw_measx)};
 
 	perf_counter_t _loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};

@@ -12,3 +12,5 @@ uint8 version                   # Message version (0x02 for this version)
 uint8 reserved0                 # Reserved (Padding)
 
 uint32[10] dwrd                 # The data words (Subframe data)
+
+# TOPICS gnss_ephemeris gnss_ephemeris_in gnss_ephemeris_out
