@@ -109,6 +109,11 @@ struct GPS_Sat_Info {
 	satellite_info_s _data;
 };
 
+/* struct for GNSS ephemeris data */
+struct GNSS_Ephemeris {
+	gnss_ephemeris_s _data;
+};
+
 /* struct for GNSS raw measurement data */
 struct GNSS_Raw_Measx {
 	gnss_raw_measx_s _data;
@@ -202,6 +207,10 @@ private:
 
 	uORB::PublicationMulti<satellite_info_s>	_report_sat_info_pub{ORB_ID(satellite_info)};		///< uORB pub for satellite info
 
+	GNSS_Ephemeris                  *_gnss_ephemeris{nullptr};                      ///< instance of GNSS Ephemeris data object
+	gnss_ephemeris_s		*_p_report_gnss_ephemeris{nullptr};		///< pointer to uORB topic for GNSS Ephemeris measurements
+	uORB::PublicationMulti<gnss_ephemeris_s>	_report_gnss_ephemeris_pub{ORB_ID(gnss_ephemeris)};	///< uORB pub for GNSS Ephemeris measurements
+
 	GNSS_Raw_Measx                  *_gnss_raw_measx{nullptr};                      ///< instance of GNSS raw measurements data object
 	gnss_raw_measx_s		*_p_report_gnss_raw_measx{nullptr};		///< pointer to uORB topic for raw GNSS measurements
 	uORB::PublicationMulti<gnss_raw_measx_s>	_report_gnss_raw_measx_pub{ORB_ID(gnss_raw_measx)};	///< uORB pub for raw GNSS measurements
@@ -244,6 +253,12 @@ private:
 	 * Publish the GNSS raw measurements
 	 */
 	void                            publishGNSSRawMeasx();
+
+	/**
+	 * Publish the GNSS Ephemeris data
+	 */
+	void                            publishGNSSEphemeris();
+	 
 
 	/**
 	 * Publish RTCM corrections
@@ -340,7 +355,16 @@ GPS::GPS(const char *path, gps_driver_mode_t mode, GPSHelper::Interface interfac
 		memset(_p_report_sat_info, 0, sizeof(*_p_report_sat_info));
 	}
 
-	/* Feature for AdversaryAnchor: handle gnss_raw_measx >>> */
+	/* Feature for AdversaryAnchor: handle gnss_ephemeris and gnss_raw_measx >>> */
+	int32_t enable_gnss_ephemeris = 0;
+	param_get(param_find("GPS_EPHEMERIS"), &enable_gnss_ephemeris);
+
+	if (enable_gnss_ephemeris) {
+		_gnss_ephemeris = new GNSS_Ephemeris();
+		_p_report_gnss_ephemeris = &_gnss_ephemeris->_data;
+		memset(_p_report_gnss_ephemeris, 0, sizeof(*_p_report_gnss_ephemeris));
+	}
+
 	int32_t enable_gnss_raw_measx = 0;
 	param_get(param_find("GPS_RAW_MEASX"), &enable_gnss_raw_measx);
 
@@ -408,6 +432,7 @@ GPS::~GPS()
 	}
 
 	delete _sat_info;
+	delete _gnss_ephemeris;
 	delete _gnss_raw_measx;
 	delete _dump_to_device;
 	delete _dump_from_device;
@@ -871,7 +896,9 @@ GPS::run()
 
 		/* FALLTHROUGH */
 		case gps_driver_mode_t::UBX:
-			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info, _p_report_gnss_raw_measx,
+			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info, 
+				_p_report_gnss_ephemeris,
+				_p_report_gnss_raw_measx,
 						   gps_ubx_dynmodel, heading_offset, f9p_uart2_baudrate, ubx_mode);
 			set_device_type(DRV_GPS_DEVTYPE_UBX);
 			break;
@@ -992,11 +1019,15 @@ GPS::run()
 				if (_p_report_sat_info && (helper_ret & 2)) {
 					publishSatelliteInfo();
 				}
-
+				
 				if (_p_report_gnss_raw_measx && (helper_ret & 4)) {
 					publishGNSSRawMeasx();
 				}
 
+				if (_p_report_gnss_ephemeris && (helper_ret & 8)) {
+					publishGNSSEphemeris();
+				}
+				
 				reset_if_scheduled();
 
 				/* measure update rate every 5 seconds */
@@ -1263,6 +1294,19 @@ GPS::publishGNSSRawMeasx()
 
 	} else {
 		//we don't publish GNSS raw measx for the secondary gps
+	}
+}
+
+void 
+GPS::publishGNSSEphemeris()
+{
+	if (_instance == Instance::Main) {
+		if (_p_report_gnss_ephemeris != nullptr) {
+			_report_gnss_ephemeris_pub.publish(*_p_report_gnss_ephemeris);
+		}
+
+	} else {
+		//we don't publish GNSS ephemeris for the secondary gps
 	}
 }
 

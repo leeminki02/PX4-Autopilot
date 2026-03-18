@@ -218,6 +218,7 @@ void LoggedTopics::add_default_topics()
 	add_optional_topic_multi("sensor_accel", 1000, 4);
 	add_optional_topic_multi("sensor_baro", 1000, 4);
 	add_topic_multi("sensor_gps", 1000, 2);
+	// add_topic_multi("gnss_ephemeris", 1000, 2); // <- slow (1/6 Hz)
 	add_topic_multi("gnss_raw_measx", 125, 2);
 	add_topic_multi("sensor_gnss_relative", 1000, 1);
 	add_optional_topic_multi("sensor_gyro", 1000, 4);
