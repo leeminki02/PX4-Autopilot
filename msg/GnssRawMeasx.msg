@@ -14,3 +14,5 @@ uint8[24] svid			# Satellite ID
 uint8[24] cno			# carrier noise ratio (0..63)
 int32[24] dopplerms		# Doppler Measurement [*0.04 m/s]
 int32[24] dopplerhz		# Doppler Measurement [*0.2  Hz]
+uint16[24] wholechips   # whole value of the code phase measurement (0..1022 for GPS)
+uint16[24] fracchips    # fractional value of the code phase measurement (0..1023)

@@ -44,6 +44,8 @@ using namespace matrix;
 static constexpr double CONSTANTS_R_OF_EARTH = 6378137.0;          // Semi-major axis (a)
 static constexpr double CONSTANTS_EARTH_E2 = 6.69437999014e-3;          // Eccentricity squared (e^2)
 
+static const double ms_to_meters = 299792458.0 * 0.001; // speed of light in m/s * 1 ms
+
 /**
  * Convert Geodetic coordinates (Lat, Lon, Alt) to ECEF coordinates (X, Y, Z)
  * * @param lat: Latitude in degrees
@@ -414,12 +416,36 @@ void GpsMeasxSim::Run()
 			// int32[24] dopplerhz		# Doppler Measurement [*0.2  Hz]
 			int32_t doppler_hz = (int32_t)round(doppler_total / 0.2);
 
+			double true_range = 0.0;
+
+			if (is_benign || (sim_en_spoof == 2 && (sat_ecef.svid[i] % 2 != 0))) {
+				true_range = (p_sat - p_drone).norm();
+			} else {
+				double range_sim = (p_sat - p_emitter).norm(); 
+				double range_phy = (p_emitter - p_drone).norm();
+				true_range = range_sim + range_phy;
+			}
+
+			true_range += (double)generate_wgn() * 2.0;
+
+			double remainder_dist = fmod(true_range, ms_to_meters);
+			
+			double total_chips = (remainder_dist / ms_to_meters) * 1023.0;
+
+			uint16_t whole_chips = (uint16_t)floor(total_chips);
+			uint16_t frac_chips = (uint16_t)round((total_chips - whole_chips) * 1024.0);
+
+			if (whole_chips >= 1023) { whole_chips = 1022; }
+			if (frac_chips >= 1024) { frac_chips = 1023; }
+
 			// populate
 			gnss_raw_measx.cno[i] = 45; // dummy value for now.
 			gnss_raw_measx.gnssid[i] = 0; // they're all GPS satellites.
 			gnss_raw_measx.svid[i] = sat_ecef.svid[i];
 			gnss_raw_measx.dopplerms[i] = doppler_ms;
 			gnss_raw_measx.dopplerhz[i] = doppler_hz;
+			gnss_raw_measx.wholechips[i] = whole_chips;
+			gnss_raw_measx.fracchips[i] = frac_chips;
 
 			count++;
 			if (count >= gnss_raw_measx.GNSS_MEASX_MAX_SATELLITES) {
