@@ -6,7 +6,7 @@ serial_config:
         else
             set UXRCE_DDS_ARGS "-t udp"
         fi
-        uxrce_dds_client start ${UXRCE_DDS_ARGS}
+        uxrce_dds_client start ${UXRCE_DDS_ARGS} ${NS_ARG}
 
       port_config_param:
         name: UXRCE_DDS_CFG
@@ -37,6 +37,18 @@ parameters:
             type: int32
             reboot_required: true
             default: 1
+
+        UXRCE_DDS_NS:
+            description:
+                short: uXRCE-DDS Client Namespace
+                long: |
+                    Sets the namespace for the uXRCE-DDS client.
+                    For example, a value of 1 will result in the namespace 'px4_1'.
+                    A value of -1 disables the namespace.
+            category: System
+            type: int32
+            reboot_required: true
+            default: -1
 
         UXRCE_DDS_PRT:
             description:

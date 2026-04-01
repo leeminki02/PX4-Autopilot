@@ -34,6 +34,7 @@
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/cli.h>
 #include <px4_platform_common/posix.h>
+#include <parameters/param.h>
 
 #include "uxrce_dds_client.h"
 
@@ -952,6 +953,12 @@ int UxrceddsClient::print_status()
 		PX4_INFO("Using transport:     serial");
 	}
 
+	if (_client_namespace != nullptr) {
+                PX4_INFO("Namespace:           %s", _client_namespace);
+        } else {
+		PX4_INFO("Namespace:           none");
+	}
+
 	if (_connected) {
 		PX4_INFO("Payload tx:          %i B/s", _last_payload_tx_rate);
 		PX4_INFO("Payload rx:          %i B/s", _last_payload_rx_rate);
@@ -1038,6 +1045,21 @@ UxrceddsClient *UxrceddsClient::instantiate(int argc, char *argv[])
 			break;
 		}
 	}
+
+	param_t uxrce_dds_ns_param = param_find("UXRCE_DDS_NS");
+	int32_t uxrce_dds_ns_value = -1;
+
+	if (uxrce_dds_ns_param != PARAM_INVALID) {
+		param_get(uxrce_dds_ns_param, &uxrce_dds_ns_value);
+	}
+
+	static char namespace_buffer[32];
+
+	if (uxrce_dds_ns_value >= 0) {
+		snprintf(namespace_buffer, sizeof(namespace_buffer), "px4_%d", (int)uxrce_dds_ns_value);
+		client_namespace = namespace_buffer;
+	}
+
 
 #if defined(UXRCE_DDS_CLIENT_UDP)
 
