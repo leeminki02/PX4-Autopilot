@@ -5,3 +5,22 @@
 param set-default UXRCE_DDS_SYNCT 0
 param set-default UXRCE_DDS_SYNCC 1
 
+param set-default COM_OBL_RC_ACT 3
+
+# >>>>> Failsafe configurations modified for swarmbox.
+# NOTE: these parameter modifications are done for huge scale testings. You may want to change them for your preferred failsafe behaviors.
+# please refer to the original documents: https://docs.px4.io/main/en/config/safety
+param set-default SYS_FAILURE_EN 0
+param set-default COM_LOW_BAT_ACT 0
+param set-default SIM_BAT_ENABLE 0 # disable battery simulator by default
+
+param set-default COM_ARM_WO_GPS 1 # arm without GNSS config, without warning
+param set-default COM_ARM_BAT_MIN 0 # disable battery low warning
+
+param set-default COM_DISARM_PRFLT -1  # disable disarm preflight checks
+# param set-default COM_POS_FS_DELAY 1
+# param set-default COM_POS_FS_EPH   -1
+
+param set-default NAV_DLL_ACT 0 # disable data link (ground control) loss failsafe
+
+# <<<<<
