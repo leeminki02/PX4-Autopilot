@@ -1,0 +1,7 @@
+#!/bin/sh
+
+. ${R}etc/init.d-posix/airframes/4001_gz_x500
+
+param set-default UXRCE_DDS_SYNCT 0
+param set-default UXRCE_DDS_SYNCC 1
+
