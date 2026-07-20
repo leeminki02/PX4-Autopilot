@@ -45,6 +45,7 @@ parameters:
                     Sets the namespace for the uXRCE-DDS client.
                     For example, a value of 1 will result in the namespace 'px4_1'.
                     A value of -1 disables the namespace.
+                    (This configuration is for configuring real-world flight firmwares.)
             category: System
             type: int32
             reboot_required: true
