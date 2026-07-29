@@ -204,3 +204,10 @@ if param compare -s SENS_EN_ARSPDSIM 1
 then
 	sensor_airspeed_sim start
 fi
+
+# for GPS signal simulation
+if param compare -s SENS_EN_GPSSIM 1
+then
+	# sensor_gps_sim start
+	gps_measx_sim start
+fi
