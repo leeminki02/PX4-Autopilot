@@ -120,4 +120,5 @@ px4_add_romfs_files(
 	70000_gz_atmos
 
 	# [22000, 22999] Reserve for custom models
+	24001_gz_x500_swarmbox
 )
