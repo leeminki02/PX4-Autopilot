@@ -902,7 +902,7 @@ GPS::run()
 
 		/* FALLTHROUGH */
 		case gps_driver_mode_t::UBX:
-			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_report_gps_pos, _p_report_sat_info, _p_report_gnss_raw_measx,
+			_helper = new GPSDriverUBX(_interface, &GPS::callback, this, &_sensor_gps, _p_report_sat_info, _p_report_gnss_raw_measx,
 						   gps_ubx_dynmodel, heading_offset, f9p_uart2_baudrate, ubx_mode);
 			set_device_type(DRV_GPS_DEVTYPE_UBX);
 			break;
@@ -1275,25 +1275,6 @@ GPS::publish()
 		// The uORB message definition requires this data to be set to a NAN if no new valid data is available.
 		_sensor_gps.heading = NAN;
 		_is_gps_main_advertised.store(true);
-
-		if (_report_gps_pos.spoofing_state != _spoofing_state) {
-
-			if (_report_gps_pos.spoofing_state > sensor_gps_s::SPOOFING_STATE_NONE) {
-				PX4_WARN("GPS spoofing detected! (state: %d)", _report_gps_pos.spoofing_state);
-			}
-
-			_spoofing_state = _report_gps_pos.spoofing_state;
-		}
-
-		if (_report_gps_pos.jamming_state != _jamming_state) {
-
-			if (_report_gps_pos.jamming_state > sensor_gps_s::JAMMING_STATE_WARNING) {
-				PX4_WARN("GPS jamming detected! (state: %d) (indicator: %d)", _report_gps_pos.jamming_state,
-					 (uint8_t)_report_gps_pos.jamming_indicator);
-			}
-
-			_jamming_state = _report_gps_pos.jamming_state;
-		}
 	}
 }
 
@@ -1312,20 +1293,6 @@ GPS::publishSatelliteInfo()
 	}
 }
 
-void
-GPS::publishGNSSRawMeasx()
-{
-	if (_instance == Instance::Main) {
-		if (_p_report_gnss_raw_measx != nullptr) {
-			_report_gnss_raw_measx_pub.publish(*_p_report_gnss_raw_measx);
-		}
-
-		_is_gps_main_advertised.store(true);
-
-	} else {
-		//we don't publish GNSS raw measx for the secondary gps
-	}
-}
 
 void
 GPS::publishGNSSRawMeasx()
