@@ -99,6 +99,13 @@ private:
 	uORB::PublicationMulti<gnss_raw_measx_s> _gnss_raw_measx_pub{ORB_ID(gnss_raw_measx)};
 
 	perf_counter_t _loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
+	// Diagnostics only: how tightly satellite_ecef arrivals actually drive Run(), and how stale the
+	// sample is by the time it's processed here. See sync_diagnostics section in Run().
+	perf_counter_t _sat_ecef_trigger_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": sat_ecef trigger interval")};
+	hrt_abstime _hrt_to_realtime_offset_us{0}; //< one-shot calibration; see init()
+	uint32_t _sync_dbg_count{0};
+	int64_t _sync_dbg_latency_sum_us{0};
+	int64_t _sync_dbg_latency_max_us{0};
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::SIM_GPS_USED>) _sim_gps_used,

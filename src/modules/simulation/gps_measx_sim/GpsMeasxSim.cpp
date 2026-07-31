@@ -36,6 +36,8 @@
 #include <drivers/drv_sensor.h>
 #include <lib/drivers/device/Device.hpp>
 #include <lib/geo/geo.h>
+#include <px4_platform_common/time.h>
+#include <algorithm>
 #include <cmath>
 
 using namespace matrix;
@@ -83,6 +85,7 @@ GpsMeasxSim::~GpsMeasxSim()
 {
 	_satellite_ecef_sub.unregisterCallback();
 	perf_free(_loop_perf);
+	perf_free(_sat_ecef_trigger_interval_perf);
 }
 
 bool GpsMeasxSim::init()
@@ -91,6 +94,15 @@ bool GpsMeasxSim::init()
 		PX4_ERR("callback registration failed");
 		return false;
 	}
+
+	// One-shot offset so hrt_absolute_time() (CLOCK_MONOTONIC) samples taken in Run() can be compared
+	// against satellite_ecef.host_epoch_us, which is stamped on the ROS/wall-clock (CLOCK_REALTIME) side
+	// and is left untouched by uxrce_dds_client (unlike the auto-converted "timestamp" field).
+	struct timespec ts;
+	px4_clock_gettime(CLOCK_REALTIME, &ts);
+	const hrt_abstime realtime_now_us = (hrt_abstime)ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000ULL;
+	_hrt_to_realtime_offset_us = realtime_now_us - hrt_absolute_time();
+
 	return true;
 }
 
@@ -249,6 +261,7 @@ void GpsMeasxSim::Run()
 	
 	if (_satellite_ecef_sub.updated()) { // I hope this is always true when we reach here
 		/* signal property simulator */
+		perf_count(_sat_ecef_trigger_interval_perf);
 
 		/* get satellite ecef positions from _satellite_ecef_sub */
 		satellite_ecef_s sat_ecef{};
@@ -258,6 +271,25 @@ void GpsMeasxSim::Run()
 		if (!log_received) {
 			PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count);
 			log_received = true;
+		}
+
+		// sync_diagnostics: publish-to-process latency, throttled to ~2s @ 8Hz.
+		// host_epoch_us bypasses uxrce_dds_client's auto clock-domain conversion (which only rewrites
+		// fields literally named "timestamp"), so this is a genuine ROS-publish-to-PX4-process latency.
+		{
+			const int64_t now_realtime_us = (int64_t)hrt_absolute_time() + (int64_t)_hrt_to_realtime_offset_us;
+			const int64_t latency_us = now_realtime_us - (int64_t)sat_ecef.host_epoch_us;
+			_sync_dbg_latency_sum_us += latency_us;
+			_sync_dbg_latency_max_us = std::max(_sync_dbg_latency_max_us, latency_us);
+			if (++_sync_dbg_count >= 16) {
+				const double trigger_interval_avg_ms = (double)perf_mean(_sat_ecef_trigger_interval_perf) / 1000.0;
+				PX4_DEBUG("sync_diag: gps_tow=%.3f latency avg=%.2fms max=%.2fms | trigger interval avg=%.2fms",
+					 sat_ecef.gps_tow, (double)_sync_dbg_latency_sum_us / 1000.0 / _sync_dbg_count,
+					 (double)_sync_dbg_latency_max_us / 1000.0, trigger_interval_avg_ms);
+				_sync_dbg_count = 0;
+				_sync_dbg_latency_sum_us = 0;
+				_sync_dbg_latency_max_us = 0;
+			}
 		}
 
 		/* get groundtruth positions */
