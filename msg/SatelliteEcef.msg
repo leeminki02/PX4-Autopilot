@@ -3,6 +3,7 @@
 uint64 timestamp		# time since system start (microseconds)
 uint8 SAT_INFO_MAX_SATELLITES = 18
 
+float64 gps_tow			# GPS time-of-week (s) at which p_*/v_* were computed; the sole time basis for doppler inversion, independent of any host clock
 uint8 count			# Number of satellites visible to the receiver
 uint8[18] svid	 		# Space vehicle ID [1..255], see scheme below
 

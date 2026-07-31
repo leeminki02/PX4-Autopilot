@@ -341,6 +341,10 @@ void GpsMeasxSim::Run()
 		/* calculate doppler */
 		gnss_raw_measx_s gnss_raw_measx{};
 		gnss_raw_measx.timestamp = hrt_absolute_time();
+		// physical reference time for this measurement set: the GPS TOW at which sat_ecef's p_*/v_* were
+		// computed, not the local hrt above (which only marks when this module happened to process it).
+		gnss_raw_measx.gpstow = (uint32_t)llround(sat_ecef.gps_tow * 1000.0);
+		gnss_raw_measx.flags = 1;  // TOW set
 
 		int count = 0;
 		// if sim_en_spoof is 2 (mixed), create a spoofing effect on half of the satellites and benign on the other half
