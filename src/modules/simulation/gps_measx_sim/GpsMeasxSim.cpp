@@ -75,18 +75,22 @@ static void map_projection_global_get_ecef(double lat, double lon, double alt, d
 
 GpsMeasxSim::GpsMeasxSim() :
 	ModuleParams(nullptr),
-	ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::hp_default)
+	WorkItem(MODULE_NAME, px4::wq_configurations::hp_default)
 {
 }
 
 GpsMeasxSim::~GpsMeasxSim()
 {
+	_satellite_ecef_sub.unregisterCallback();
 	perf_free(_loop_perf);
 }
 
 bool GpsMeasxSim::init()
 {
-	ScheduleOnInterval(125_ms); // 8 Hz
+	if (!_satellite_ecef_sub.registerCallback()) {
+		PX4_ERR("callback registration failed");
+		return false;
+	}
 	return true;
 }
 

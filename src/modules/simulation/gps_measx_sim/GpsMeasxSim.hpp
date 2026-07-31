@@ -37,9 +37,10 @@
 #include <px4_platform_common/defines.h>
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/module_params.h>
-#include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
+#include <px4_platform_common/px4_work_queue/WorkItem.hpp>
 #include <uORB/PublicationMulti.hpp>
 #include <uORB/Subscription.hpp>
+#include <uORB/SubscriptionCallback.hpp>
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/sensor_gps.h>
@@ -52,7 +53,7 @@
 
 using namespace time_literals;
 
-class GpsMeasxSim : public ModuleBase<GpsMeasxSim>, public ModuleParams, public px4::ScheduledWorkItem
+class GpsMeasxSim : public ModuleBase<GpsMeasxSim>, public ModuleParams, public px4::WorkItem
 {
 public:
 	GpsMeasxSim();
@@ -90,7 +91,9 @@ private:
 
 	uORB::Subscription _spoofer_global_position_sub{ORB_ID(spoofer_global_position)};
 	uORB::Subscription _spoofer_local_position_sub{ORB_ID(spoofer_local_position)};
-	uORB::Subscription _satellite_ecef_sub{ORB_ID(satellite_ecef)};
+	// Run() is triggered directly by this arriving, mirroring how a real receiver latches all
+	// channels off one common epoch instead of being polled by an independent timer.
+	uORB::SubscriptionCallbackWorkItem _satellite_ecef_sub{this, ORB_ID(satellite_ecef)};
 	uORB::Subscription _gnss_ephemeris_in_sub{ORB_ID(gnss_ephemeris_in)};
 	uORB::PublicationMulti<gnss_ephemeris_s> _gnss_ephemeris_out_pub{ORB_ID(gnss_ephemeris_out)};
 	uORB::PublicationMulti<gnss_raw_measx_s> _gnss_raw_measx_pub{ORB_ID(gnss_raw_measx)};
