@@ -250,7 +250,11 @@ void GpsMeasxSim::Run()
 		satellite_ecef_s sat_ecef{};
 		_satellite_ecef_sub.copy(&sat_ecef);
 		// TODO: calculate doppler shifts with noise using groundtruth positions
-		// PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count);
+		// PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count); //< TODO: make this be printed only once.
+		if (!log_received) {
+			PX4_INFO("Received %d satellites from satellite_ecef_groundtruth", sat_ecef.count);
+			log_received = true;
+		}
 
 		/* get groundtruth positions */
 		vehicle_global_position_s gpos_truth{};
@@ -288,7 +292,32 @@ void GpsMeasxSim::Run()
 
 		/* load spoofer position as ecef */
 		int8_t sim_en_spoof = _sim_en_spoof.get();
-		bool is_benign = (_sim_en_spoof.get() == 0);
+		// log
+		if (prev_sim_en_spoof != sim_en_spoof) {
+			bool valid_mode = false;
+			switch (sim_en_spoof) {
+			case 0:
+				PX4_INFO("GPS spoofer simulation disabled");
+				valid_mode = true;
+				break;
+			case 1:
+				PX4_WARN("GPS spoofer simulation enabled");
+				valid_mode = true;
+				break;
+			case 2:
+				PX4_WARN("GPS spoofer simulation enabled in mixed mode");
+				valid_mode = true;
+				break;
+			default:
+				PX4_ERR("Unexpected SIM_EN_SPOOF value: %d, ignoring", sim_en_spoof);
+				break;
+			}
+			if (valid_mode) {
+				prev_sim_en_spoof = sim_en_spoof;
+			}
+		}
+
+		bool is_benign = (sim_en_spoof == 0);
 		Vector3d p_emitter(0.0, 0.0, 0.0);
 		Vector3d v_emitter(0.0, 0.0, 0.0);
 

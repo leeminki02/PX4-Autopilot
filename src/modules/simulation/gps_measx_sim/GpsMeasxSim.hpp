@@ -73,6 +73,10 @@ public:
 private:
 	void Run() override;
 
+	bool log_received = false;
+	int prev_sim_en_spoof = -1; //< represents unset
+
+
 	// generate white Gaussian noise sample with std=1
 	static float generate_wgn();
 
