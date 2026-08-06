@@ -86,4 +86,4 @@ float32 hagl_max_xy			# maximum height above ground level for xy-control (meters
 
 # TOPICS vehicle_local_position vehicle_local_position_groundtruth external_ins_local_position
 # TOPICS estimator_local_position
-# TOPICS spoofer_local_position
+# TOPICS emitter_local_position target_local_position

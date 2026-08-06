@@ -35,4 +35,4 @@ bool dead_reckoning		# True if this position is estimated through dead-reckoning
 # TOPICS vehicle_global_position vehicle_global_position_groundtruth external_ins_global_position
 # TOPICS estimator_global_position
 # TOPICS aux_global_position
-# TOPICS spoofer_global_position
+# TOPICS emitter_global_position target_global_position

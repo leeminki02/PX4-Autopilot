@@ -68,10 +68,16 @@ subscriptions:
   - topic: /fmu/in/satellite_ecef
     type: px4_msgs::msg::SatelliteEcef
 
-  - topic: /fmu/in/spoofer_global_position
+  - topic: /fmu/in/emitter_global_position
     type: px4_msgs::msg::VehicleGlobalPosition
 
-  - topic: /fmu/in/spoofer_local_position
+  - topic: /fmu/in/emitter_local_position
+    type: px4_msgs::msg::VehicleLocalPosition
+
+  - topic: /fmu/in/target_global_position
+    type: px4_msgs::msg::VehicleGlobalPosition
+
+  - topic: /fmu/in/target_local_position
     type: px4_msgs::msg::VehicleLocalPosition
 
   - topic: /fmu/in/gnss_ephemeris_in

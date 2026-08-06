@@ -167,7 +167,7 @@ void GpsMeasxSim::Run()
 			position_updated = true;
 		}
 	} else {
-		if (_spoofer_global_position_sub.updated() && _spoofer_local_position_sub.updated()) {
+		if (_target_global_position_sub.updated() && _target_local_position_sub.updated()) {
 			position_updated = true;
 		}
 	}
@@ -183,14 +183,15 @@ void GpsMeasxSim::Run()
 			_vehicle_local_position_sub.copy(&lpos);
 			_vehicle_global_position_sub.copy(&gpos);
 		} else {
-			// GPS spoofer simulation enabled: use spoofer position
+			// GPS spoofer simulation enabled: sensor_gps reports the claimed target position,
+			// i.e. what the spoof wants the receiver to believe it is at.
 			// warn once "spoofer enabled"
 			if (!_has_warned_spoofer) {
 				PX4_WARN("GPS spoofer simulation enabled");
 				_has_warned_spoofer = true;
 			}
-			_spoofer_local_position_sub.copy(&lpos);
-			_spoofer_global_position_sub.copy(&gpos);
+			_target_local_position_sub.copy(&lpos);
+			_target_global_position_sub.copy(&gpos);
 		}
 
 		double latitude = gpos.lat + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
@@ -298,10 +299,10 @@ void GpsMeasxSim::Run()
 		_vehicle_global_position_sub.copy(&gpos_truth);
 		_vehicle_local_position_sub.copy(&lpos_truth);
 
-		double drone_x, drone_y, drone_z;
+		double receiver_x, receiver_y, receiver_z;
 		map_projection_global_get_ecef(gpos_truth.lat, gpos_truth.lon, gpos_truth.alt,
-					      		&drone_x, &drone_y, &drone_z);
-		Vector3d p_drone(drone_x, drone_y, drone_z);
+					      		&receiver_x, &receiver_y, &receiver_z);
+		Vector3d p_receiver(receiver_x, receiver_y, receiver_z);
 
 		// transform velocity to ecef
 		double lat_rad = math::radians(gpos_truth.lat);
@@ -323,10 +324,10 @@ void GpsMeasxSim::Run()
 		R_ned_to_ecef(2, 2) = -sin_lat;
 
 		Vector3f v_ned(lpos_truth.vx, lpos_truth.vy, lpos_truth.vz);
-		Vector3f v_drone_f = R_ned_to_ecef * v_ned;
-		Vector3d v_drone(v_drone_f(0), v_drone_f(1), v_drone_f(2));
+		Vector3f v_receiver_f = R_ned_to_ecef * v_ned;
+		Vector3d v_receiver(v_receiver_f(0), v_receiver_f(1), v_receiver_f(2));
 
-		/* load spoofer position as ecef */
+		/* load emitter (physical) and target (claimed) positions as ecef */
 		int8_t sim_en_spoof = _sim_en_spoof.get();
 		// log
 		if (prev_sim_en_spoof != sim_en_spoof) {
@@ -354,24 +355,43 @@ void GpsMeasxSim::Run()
 		}
 
 		bool is_benign = (sim_en_spoof == 0);
+		// emitter: spoofer's physical location, contributes D_induced(emitter, receiver).
 		Vector3d p_emitter(0.0, 0.0, 0.0);
 		Vector3d v_emitter(0.0, 0.0, 0.0);
+		// target: location the spoofer wants the receiver to believe, contributes D_claimed(sat, target).
+		Vector3d p_target(0.0, 0.0, 0.0);
+		Vector3d v_target(0.0, 0.0, 0.0);
 
 		if (!is_benign) {
-			vehicle_global_position_s gpos_spoofer{};
-			vehicle_local_position_s lpos_spoofer{};
-			_spoofer_global_position_sub.copy(&gpos_spoofer);
-			_spoofer_local_position_sub.copy(&lpos_spoofer);
+			vehicle_global_position_s gpos_emitter{};
+			vehicle_local_position_s lpos_emitter{};
+			_emitter_global_position_sub.copy(&gpos_emitter);
+			_emitter_local_position_sub.copy(&lpos_emitter);
 
-			double spoofer_x, spoofer_y, spoofer_z;
-			map_projection_global_get_ecef(gpos_spoofer.lat, gpos_spoofer.lon, gpos_spoofer.alt,
-						       &spoofer_x, &spoofer_y, &spoofer_z);
-			p_emitter = Vector3d(spoofer_x, spoofer_y, spoofer_z);
+			double emitter_x, emitter_y, emitter_z;
+			map_projection_global_get_ecef(gpos_emitter.lat, gpos_emitter.lon, gpos_emitter.alt,
+						       &emitter_x, &emitter_y, &emitter_z);
+			p_emitter = Vector3d(emitter_x, emitter_y, emitter_z);
 
 			// transform velocity from NED to ecef
-			Vector3f v_ned_spoofer(lpos_spoofer.vx, lpos_spoofer.vy, lpos_spoofer.vz);
-			Vector3f v_spoofer_f = R_ned_to_ecef * v_ned_spoofer;
-			v_emitter = Vector3d(v_spoofer_f(0), v_spoofer_f(1), v_spoofer_f(2));
+			Vector3f v_ned_emitter(lpos_emitter.vx, lpos_emitter.vy, lpos_emitter.vz);
+			Vector3f v_emitter_f = R_ned_to_ecef * v_ned_emitter;
+			v_emitter = Vector3d(v_emitter_f(0), v_emitter_f(1), v_emitter_f(2));
+
+			vehicle_global_position_s gpos_target{};
+			vehicle_local_position_s lpos_target{};
+			_target_global_position_sub.copy(&gpos_target);
+			_target_local_position_sub.copy(&lpos_target);
+
+			double target_x, target_y, target_z;
+			map_projection_global_get_ecef(gpos_target.lat, gpos_target.lon, gpos_target.alt,
+						       &target_x, &target_y, &target_z);
+			p_target = Vector3d(target_x, target_y, target_z);
+
+			// transform velocity from NED to ecef
+			Vector3f v_ned_target(lpos_target.vx, lpos_target.vy, lpos_target.vz);
+			Vector3f v_target_f = R_ned_to_ecef * v_ned_target;
+			v_target = Vector3d(v_target_f(0), v_target_f(1), v_target_f(2));
 		}
 
 		/* calculate doppler */
@@ -394,25 +414,23 @@ void GpsMeasxSim::Run()
 			const double lambda = 0.19029367279836487; // TODO: check L1 frequency wavelength
 			
 			if (is_benign || (sim_en_spoof == 2 && (sat_ecef.svid[i] % 2 != 0))) { 
-				// benign observation
-				// benign doppler: doppler_total = doppler_sat_drone
-				Vector3d rel_vel = v_sat - v_drone;
-				Vector3d u_los = (p_sat - p_drone).normalized(); // line-of-sight unit vector
+				// benign observation: D_benign = D_claimed(sat, receiver)
+				Vector3d rel_vel = v_sat - v_receiver;
+				Vector3d u_los = (p_sat - p_receiver).normalized(); // line-of-sight unit vector
 				doppler_total = - (rel_vel.dot(u_los)) / lambda;
 			} else { 
-				// spoofed observation
-				// spoofed doppler: doppler_total = doppler_sat_emitter + doppler_emitter_drone
-				// 1. doppler_sim = doppler_sat_emitter
-				Vector3d rel_vel = v_sat - v_emitter;
-				Vector3d u_los = (p_sat - p_emitter).normalized(); // line-of-sight unit vector
-				double doppler_sim = - (rel_vel.dot(u_los)) / lambda;
+				// spoofed observation: D_spoofed = D_claimed(sat, target) + D_induced(emitter, receiver)
+				// 1. D_claimed(sat, target): doppler encoded into the spoofed signal content
+				Vector3d rel_vel = v_sat - v_target;
+				Vector3d u_los = (p_sat - p_target).normalized(); // line-of-sight unit vector
+				double doppler_claimed = - (rel_vel.dot(u_los)) / lambda;
 
-				// 2. doppler_phy = doppler_emitter_drone (the doppler shift caused by spoofer and drone's physical motion)
-				Vector3d rel_vel_phy = v_emitter - v_drone;
-				Vector3d u_los_phy = (p_emitter - p_drone).normalized(); // line-of-sight unit vector
-				double doppler_phy = - (rel_vel_phy.dot(u_los_phy)) / lambda;
+				// 2. D_induced(emitter, receiver): doppler caused by the real emitter-receiver geometry
+				Vector3d rel_vel_induced = v_emitter - v_receiver;
+				Vector3d u_los_induced = (p_emitter - p_receiver).normalized(); // line-of-sight unit vector
+				double doppler_induced = - (rel_vel_induced.dot(u_los_induced)) / lambda;
 
-				doppler_total = doppler_sim + doppler_phy;
+				doppler_total = doppler_claimed + doppler_induced;
 			}
 			
 			// add noise
@@ -425,11 +443,11 @@ void GpsMeasxSim::Run()
 			double true_range = 0.0;
 
 			if (is_benign || (sim_en_spoof == 2 && (sat_ecef.svid[i] % 2 != 0))) {
-				true_range = (p_sat - p_drone).norm();
+				true_range = (p_sat - p_receiver).norm();
 			} else {
-				double range_sim = (p_sat - p_emitter).norm(); 
-				double range_phy = (p_emitter - p_drone).norm();
-				true_range = range_sim + range_phy;
+				double range_claimed = (p_sat - p_target).norm();
+				double range_induced = (p_emitter - p_receiver).norm();
+				true_range = range_claimed + range_induced;
 			}
 
 			true_range += (double)generate_wgn() * 2.0;

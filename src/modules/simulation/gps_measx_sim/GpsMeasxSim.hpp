@@ -89,8 +89,12 @@ private:
 	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position_groundtruth)};
 	uORB::PublicationMulti<sensor_gps_s> _sensor_gps_pub{ORB_ID(sensor_gps)};
 
-	uORB::Subscription _spoofer_global_position_sub{ORB_ID(spoofer_global_position)};
-	uORB::Subscription _spoofer_local_position_sub{ORB_ID(spoofer_local_position)};
+	// emitter: spoofer's physical location, used for D_induced(emitter, receiver).
+	uORB::Subscription _emitter_global_position_sub{ORB_ID(emitter_global_position)};
+	uORB::Subscription _emitter_local_position_sub{ORB_ID(emitter_local_position)};
+	// target: the location the spoofer wants the receiver to believe, used for D_claimed(sat, target).
+	uORB::Subscription _target_global_position_sub{ORB_ID(target_global_position)};
+	uORB::Subscription _target_local_position_sub{ORB_ID(target_local_position)};
 	// Run() is triggered directly by this arriving, mirroring how a real receiver latches all
 	// channels off one common epoch instead of being polled by an independent timer.
 	uORB::SubscriptionCallbackWorkItem _satellite_ecef_sub{this, ORB_ID(satellite_ecef)};
