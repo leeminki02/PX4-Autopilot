@@ -167,21 +167,33 @@ void GpsMeasxSim::Run()
 			position_updated = true;
 		}
 	} else {
-		if (_target_global_position_sub.updated() && _target_local_position_sub.updated()) {
+		if (_target_position_sub.updated()) {
 			position_updated = true;
 		}
 	}
 
 	if (position_updated) {
-		vehicle_local_position_s lpos{};
-		vehicle_global_position_s gpos{};
+		// reported position/velocity for sensor_gps, sourced from vehicle_*_position (benign)
+		// or target_position (spoofed claimed position), unified here since sensor_gps only needs a
+		// handful of scalar fields regardless of which uORB message they came from.
+		double report_lat = 0.0, report_lon = 0.0;
+		float report_alt = 0.0f;
+		uint64_t report_timestamp_sample = 0;
+		Vector3f report_vel{};
 
 		if (_sim_en_spoof.get() != 1) {
 			// if 0 (benign) or 2 (mixed), use true position for sensor_gps.
 			// explanation: for mixed mode, for more dynamic behavior testings, we should make the simulation of valid positioning (but the gnss_raw_measx measurements will be distorted)
 			// GPS spoofer simulation disabled: benign behavior
+			vehicle_local_position_s lpos{};
+			vehicle_global_position_s gpos{};
 			_vehicle_local_position_sub.copy(&lpos);
 			_vehicle_global_position_sub.copy(&gpos);
+			report_lat = gpos.lat;
+			report_lon = gpos.lon;
+			report_alt = gpos.alt;
+			report_timestamp_sample = gpos.timestamp_sample;
+			report_vel = Vector3f{lpos.vx, lpos.vy, lpos.vz};
 		} else {
 			// GPS spoofer simulation enabled: sensor_gps reports the claimed target position,
 			// i.e. what the spoof wants the receiver to believe it is at.
@@ -190,15 +202,20 @@ void GpsMeasxSim::Run()
 				PX4_WARN("GPS spoofer simulation enabled");
 				_has_warned_spoofer = true;
 			}
-			_target_local_position_sub.copy(&lpos);
-			_target_global_position_sub.copy(&gpos);
+			spoofer_position_s target{};
+			_target_position_sub.copy(&target);
+			report_lat = target.lat;
+			report_lon = target.lon;
+			report_alt = target.alt;
+			report_timestamp_sample = target.timestamp_sample;
+			report_vel = Vector3f{target.vx, target.vy, target.vz};
 		}
 
-		double latitude = gpos.lat + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
-		double longitude = gpos.lon + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
-		double altitude = (double)(gpos.alt + (generate_wgn() * 0.5f));
+		double latitude = report_lat + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
+		double longitude = report_lon + math::degrees((double)generate_wgn() * 0.2 / CONSTANTS_RADIUS_OF_EARTH);
+		double altitude = (double)(report_alt + (generate_wgn() * 0.5f));
 
-		Vector3f gps_vel = Vector3f{lpos.vx, lpos.vy, lpos.vz} + noiseGauss3f(0.06f, 0.077f, 0.158f);
+		Vector3f gps_vel = report_vel + noiseGauss3f(0.06f, 0.077f, 0.158f);
 
 		// device id
 		device::Device::DeviceId device_id;
@@ -230,7 +247,7 @@ void GpsMeasxSim::Run()
 			sensor_gps.vdop = 100.f;
 		}
 
-		sensor_gps.timestamp_sample = gpos.timestamp_sample;
+		sensor_gps.timestamp_sample = report_timestamp_sample;
 		sensor_gps.time_utc_usec = 0;
 		sensor_gps.device_id = device_id.devid;
 		sensor_gps.latitude_deg = latitude; // Latitude in degrees
@@ -363,33 +380,29 @@ void GpsMeasxSim::Run()
 		Vector3d v_target(0.0, 0.0, 0.0);
 
 		if (!is_benign) {
-			vehicle_global_position_s gpos_emitter{};
-			vehicle_local_position_s lpos_emitter{};
-			_emitter_global_position_sub.copy(&gpos_emitter);
-			_emitter_local_position_sub.copy(&lpos_emitter);
+			spoofer_position_s emitter{};
+			_emitter_position_sub.copy(&emitter);
 
 			double emitter_x, emitter_y, emitter_z;
-			map_projection_global_get_ecef(gpos_emitter.lat, gpos_emitter.lon, gpos_emitter.alt,
+			map_projection_global_get_ecef(emitter.lat, emitter.lon, emitter.alt,
 						       &emitter_x, &emitter_y, &emitter_z);
 			p_emitter = Vector3d(emitter_x, emitter_y, emitter_z);
 
 			// transform velocity from NED to ecef
-			Vector3f v_ned_emitter(lpos_emitter.vx, lpos_emitter.vy, lpos_emitter.vz);
+			Vector3f v_ned_emitter(emitter.vx, emitter.vy, emitter.vz);
 			Vector3f v_emitter_f = R_ned_to_ecef * v_ned_emitter;
 			v_emitter = Vector3d(v_emitter_f(0), v_emitter_f(1), v_emitter_f(2));
 
-			vehicle_global_position_s gpos_target{};
-			vehicle_local_position_s lpos_target{};
-			_target_global_position_sub.copy(&gpos_target);
-			_target_local_position_sub.copy(&lpos_target);
+			spoofer_position_s target{};
+			_target_position_sub.copy(&target);
 
 			double target_x, target_y, target_z;
-			map_projection_global_get_ecef(gpos_target.lat, gpos_target.lon, gpos_target.alt,
+			map_projection_global_get_ecef(target.lat, target.lon, target.alt,
 						       &target_x, &target_y, &target_z);
 			p_target = Vector3d(target_x, target_y, target_z);
 
 			// transform velocity from NED to ecef
-			Vector3f v_ned_target(lpos_target.vx, lpos_target.vy, lpos_target.vz);
+			Vector3f v_ned_target(target.vx, target.vy, target.vz);
 			Vector3f v_target_f = R_ned_to_ecef * v_ned_target;
 			v_target = Vector3d(v_target_f(0), v_target_f(1), v_target_f(2));
 		}
